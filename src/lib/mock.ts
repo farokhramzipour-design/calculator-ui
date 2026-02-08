@@ -25,6 +25,35 @@ export const mockData = {
   passportItems: [
     { id: "p1", name: "Aluminium billet", code: "76011000", description: "Primary aluminium", weight: 1200, supplier: "NordMet", notes: "Certified" }
   ],
+  invoices: [
+    {
+      id: "inv_demo",
+      shipment_id: null,
+      file_type: "PDF",
+      invoice_number: "INV-2026-02",
+      invoice_date: "2026-02-06",
+      supplier_name: "Baltic Metals",
+      buyer_name: "North Bridge",
+      currency: "EUR",
+      subtotal: "12000",
+      freight: "600",
+      insurance: "50",
+      tax_total: "0",
+      total: "12650",
+      status: "EXTRACTED",
+      items: [
+        {
+          id: "item_1",
+          description: "Steel coils",
+          hs_code: "72081000",
+          origin_country: "PL",
+          quantity: "20",
+          unit_price: "600",
+          total_price: "12000"
+        }
+      ]
+    }
+  ],
   collaborationLicenses: [
     { id: "l1", name: "UK Steel Import License", expiry: "2026-08-20", status: "Active" }
   ],
