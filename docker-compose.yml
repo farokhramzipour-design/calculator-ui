@@ -3,7 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: veritariff-frontend
+    container_name: calculator-frontend
     ports:
       - "8080:8080"
     restart: unless-stopped
