@@ -1,6 +1,7 @@
 import { getAccessToken, getRefreshToken, setTokens, clearTokens } from "@/lib/auth/authStore";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "/api";
+const runtimeConfig = (window as typeof window & { __CONFIG__?: { API_BASE_URL?: string } }).__CONFIG__;
+const API_BASE_URL = runtimeConfig?.API_BASE_URL ?? import.meta.env.VITE_API_BASE_URL ?? "/api";
 
 async function refreshTokens() {
   const refreshToken = getRefreshToken();
