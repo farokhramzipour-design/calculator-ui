@@ -1,0 +1,12 @@
+node_modules
+.dist
+.dist
+build
+.git
+.gitignore
+Dockerfile
+.dockerignore
+npm-debug.log
+.yarn
+.pnpm-store
+.env
