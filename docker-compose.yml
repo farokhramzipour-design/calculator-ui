@@ -1,9 +1,11 @@
 services:
-  web:
-    build: .
-    image: trade-ui:latest
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: veritariff-frontend
+    ports:
+      - "8080:8080"
     restart: unless-stopped
     environment:
       - VITE_API_BASE_URL=${VITE_API_BASE_URL}
-    ports:
-      - "3000:80"
