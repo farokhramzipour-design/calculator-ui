@@ -21,7 +21,15 @@ interface ShipmentDetail {
   incoterm: string;
   currency: string;
   items: Array<{ id: string; description: string; hs_code: string; quantity: string; unit_price: string; origin_country: string }>;
-  costs?: { freight_amount?: string | null; insurance_amount?: string | null } | null;
+  costs?: {
+    freight_amount?: string | null;
+    insurance_amount?: string | null;
+    insurance_is_estimated?: boolean;
+    brokerage_amount?: string | null;
+    port_fees_amount?: string | null;
+    inland_transport_amount?: string | null;
+    other_incidental_amount?: string | null;
+  } | null;
 }
 
 interface InvoiceRead {
@@ -117,7 +125,15 @@ export function ShipmentDetailPage() {
   });
 
   const costsForm = useForm({
-    defaultValues: { freight_amount: "", insurance_amount: "" }
+    defaultValues: {
+      freight_amount: "",
+      insurance_amount: "",
+      insurance_is_estimated: false,
+      brokerage_amount: "",
+      port_fees_amount: "",
+      inland_transport_amount: "",
+      other_incidental_amount: ""
+    }
   });
 
   const passportForm = useForm({
@@ -146,6 +162,17 @@ export function ShipmentDetailPage() {
     if (!shipment) return;
     if (freightLocked) costsForm.setValue("freight_amount", "0");
     if (insuranceLocked) costsForm.setValue("insurance_amount", "0");
+    if (shipment.costs) {
+      costsForm.reset({
+        freight_amount: shipment.costs.freight_amount ?? (freightLocked ? "0" : ""),
+        insurance_amount: shipment.costs.insurance_amount ?? (insuranceLocked ? "0" : ""),
+        insurance_is_estimated: shipment.costs.insurance_is_estimated ?? false,
+        brokerage_amount: shipment.costs.brokerage_amount ?? "",
+        port_fees_amount: shipment.costs.port_fees_amount ?? "",
+        inland_transport_amount: shipment.costs.inland_transport_amount ?? "",
+        other_incidental_amount: shipment.costs.other_incidental_amount ?? ""
+      });
+    }
   }, [shipment, freightLocked, insuranceLocked, costsForm]);
 
   React.useEffect(() => {
@@ -359,6 +386,15 @@ export function ShipmentDetailPage() {
               readOnly={insuranceLocked}
               {...costsForm.register("insurance_amount")}
             />
+            <label className="flex items-center gap-2 text-sm text-slate-600">
+              <input type="checkbox" {...costsForm.register("insurance_is_estimated")} disabled={insuranceLocked} />
+              Insurance is estimated
+            </label>
+            <div />
+            <Input placeholder="Brokerage amount" {...costsForm.register("brokerage_amount")} />
+            <Input placeholder="Port fees amount" {...costsForm.register("port_fees_amount")} />
+            <Input placeholder="Inland transport amount" {...costsForm.register("inland_transport_amount")} />
+            <Input placeholder="Other incidental amount" {...costsForm.register("other_incidental_amount")} />
             <Button type="submit" className="md:col-span-2">Save costs</Button>
           </form>
         </CardContent>
