@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/components/ui/toaster";
 import { mockData, useMocks } from "@/lib/mock";
+import { Navigate } from "react-router-dom";
 
 interface ShipmentRead {
   id: string;
@@ -51,6 +52,10 @@ export function CalculatorPage() {
   });
 
   const shipments = shipmentsQuery.data?.shipments ?? [];
+
+  if (!shipmentsQuery.isLoading && shipments.length === 0) {
+    return <Navigate to="/shipments" replace />;
+  }
 
   return (
     <div className="space-y-6">
