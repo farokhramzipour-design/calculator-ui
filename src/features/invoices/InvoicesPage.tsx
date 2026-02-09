@@ -43,12 +43,20 @@ export function InvoicesPage() {
   const { push } = useToast();
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
   const [shipmentId, setShipmentId] = React.useState("");
+  const [draft, setDraft] = React.useState<InvoiceRead | null>(null);
 
   const listQuery = useQuery({
     queryKey: ["invoices"],
     queryFn: () => api.get<InvoiceRead[]>("/invoices"),
     enabled: !useMocks,
     initialData: useMocks ? mockData.invoices : undefined
+  });
+
+  const shipmentsQuery = useQuery({
+    queryKey: ["shipments"],
+    queryFn: () => api.get<{ shipments: Array<{ id: string; origin_country_default: string; destination_country: string | null; status: string }> }>("/shipments"),
+    enabled: !useMocks,
+    initialData: useMocks ? mockData.shipments : undefined
   });
 
   const selectedInvoice = (useMocks ? mockData.invoices : listQuery.data)?.find((inv) => inv.id === selectedId) ?? null;
@@ -60,6 +68,14 @@ export function InvoicesPage() {
   });
 
   const invoice = useMocks ? selectedInvoice : invoiceQuery.data ?? selectedInvoice;
+  const shipments = (useMocks ? mockData.shipments.shipments : shipmentsQuery.data?.shipments) ?? [];
+
+  React.useEffect(() => {
+    if (invoice) {
+      setDraft(invoice);
+      setShipmentId(invoice.shipment_id ?? "");
+    }
+  }, [invoice]);
 
   const uploadMutation = useMutation({
     mutationFn: (file: File) => {
@@ -92,6 +108,25 @@ export function InvoicesPage() {
       listQuery.refetch();
     }
   });
+
+  const updateField = (field: keyof InvoiceRead, value: string | null) => {
+    setDraft((prev) => (prev ? { ...prev, [field]: value } : prev));
+  };
+
+  const updateItemField = (id: string, field: keyof InvoiceItemRead, value: string | null) => {
+    setDraft((prev) =>
+      prev
+        ? {
+            ...prev,
+            items: prev.items.map((item) => (item.id === id ? { ...item, [field]: value } : item))
+          }
+        : prev
+    );
+  };
+
+  const saveEdits = () => {
+    push({ title: "Edits saved", description: "Invoice edits are staged in the UI.", variant: "success" });
+  };
 
   return (
     <div className="space-y-6">
@@ -141,7 +176,7 @@ export function InvoicesPage() {
         </CardContent>
       </Card>
 
-      {invoice && (
+      {draft && (
         <Card>
           <CardHeader>
             <CardTitle>Invoice review</CardTitle>
@@ -150,27 +185,43 @@ export function InvoicesPage() {
             <div className="grid gap-4 md:grid-cols-3">
               <div>
                 <p className="text-xs text-slate-500">Supplier</p>
-                <p className="text-sm font-medium">{invoice.supplier_name ?? "-"}</p>
+                <Input value={draft.supplier_name ?? ""} onChange={(e) => updateField("supplier_name", e.target.value)} />
               </div>
               <div>
                 <p className="text-xs text-slate-500">Buyer</p>
-                <p className="text-sm font-medium">{invoice.buyer_name ?? "-"}</p>
+                <Input value={draft.buyer_name ?? ""} onChange={(e) => updateField("buyer_name", e.target.value)} />
               </div>
               <div>
                 <p className="text-xs text-slate-500">Invoice #</p>
-                <p className="text-sm font-medium">{invoice.invoice_number ?? "-"}</p>
+                <Input value={draft.invoice_number ?? ""} onChange={(e) => updateField("invoice_number", e.target.value)} />
               </div>
               <div>
                 <p className="text-xs text-slate-500">Date</p>
-                <p className="text-sm font-medium">{invoice.invoice_date ?? "-"}</p>
+                <Input type="date" value={draft.invoice_date ?? ""} onChange={(e) => updateField("invoice_date", e.target.value)} />
               </div>
               <div>
                 <p className="text-xs text-slate-500">Currency</p>
-                <p className="text-sm font-medium">{invoice.currency ?? "-"}</p>
+                <Input value={draft.currency ?? ""} onChange={(e) => updateField("currency", e.target.value)} />
               </div>
               <div>
                 <p className="text-xs text-slate-500">Subtotal</p>
-                <p className="text-sm font-medium">{invoice.subtotal ?? "-"}</p>
+                <Input value={draft.subtotal ?? ""} onChange={(e) => updateField("subtotal", e.target.value)} />
+              </div>
+              <div>
+                <p className="text-xs text-slate-500">Freight</p>
+                <Input value={draft.freight ?? ""} onChange={(e) => updateField("freight", e.target.value)} />
+              </div>
+              <div>
+                <p className="text-xs text-slate-500">Insurance</p>
+                <Input value={draft.insurance ?? ""} onChange={(e) => updateField("insurance", e.target.value)} />
+              </div>
+              <div>
+                <p className="text-xs text-slate-500">Tax total</p>
+                <Input value={draft.tax_total ?? ""} onChange={(e) => updateField("tax_total", e.target.value)} />
+              </div>
+              <div>
+                <p className="text-xs text-slate-500">Total</p>
+                <Input value={draft.total ?? ""} onChange={(e) => updateField("total", e.target.value)} />
               </div>
             </div>
 
@@ -181,30 +232,55 @@ export function InvoicesPage() {
                   <TableHead>HS code</TableHead>
                   <TableHead>Origin</TableHead>
                   <TableHead>Quantity</TableHead>
+                  <TableHead>Unit price</TableHead>
                   <TableHead>Total</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {invoice.items.map((item) => (
+                {draft.items.map((item) => (
                   <TableRow key={item.id}>
-                    <TableCell>{item.description}</TableCell>
-                    <TableCell>{item.hs_code ?? "Missing"}</TableCell>
-                    <TableCell>{item.origin_country ?? "-"}</TableCell>
-                    <TableCell>{item.quantity ?? "-"}</TableCell>
-                    <TableCell>{item.total_price ?? "-"}</TableCell>
+                    <TableCell>
+                      <Input value={item.description} onChange={(e) => updateItemField(item.id, "description", e.target.value)} />
+                    </TableCell>
+                    <TableCell>
+                      <Input value={item.hs_code ?? ""} onChange={(e) => updateItemField(item.id, "hs_code", e.target.value)} />
+                    </TableCell>
+                    <TableCell>
+                      <Input value={item.origin_country ?? ""} onChange={(e) => updateItemField(item.id, "origin_country", e.target.value)} />
+                    </TableCell>
+                    <TableCell>
+                      <Input value={item.quantity ?? ""} onChange={(e) => updateItemField(item.id, "quantity", e.target.value)} />
+                    </TableCell>
+                    <TableCell>
+                      <Input value={item.unit_price ?? ""} onChange={(e) => updateItemField(item.id, "unit_price", e.target.value)} />
+                    </TableCell>
+                    <TableCell>
+                      <Input value={item.total_price ?? ""} onChange={(e) => updateItemField(item.id, "total_price", e.target.value)} />
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
 
-            {!invoice.items.some((item) => item.hs_code) && (
+            {!draft.items.some((item) => item.hs_code) && (
               <Alert variant="warning">No HS code found. Please enter HS code or select from Passport Library.</Alert>
             )}
 
+            <div className="flex items-center justify-between gap-3">
+              <Button variant="outline" onClick={saveEdits}>
+                Save edits
+              </Button>
+              <Badge>Edits staged</Badge>
+            </div>
+
             <div className="grid gap-3 md:grid-cols-3">
               <Select
-                value={invoice.status}
-                onChange={(e) => reviewMutation.mutate({ id: invoice.id, status: e.target.value as InvoiceRead["status"] })}
+                value={draft.status}
+                onChange={(e) => {
+                  const status = e.target.value as InvoiceRead["status"];
+                  setDraft((prev) => (prev ? { ...prev, status } : prev));
+                  reviewMutation.mutate({ id: draft.id, status });
+                }}
               >
                 <option value="UPLOADED">Uploaded</option>
                 <option value="EXTRACTED">Extracted</option>
@@ -212,7 +288,14 @@ export function InvoicesPage() {
                 <option value="CONFIRMED">Confirmed</option>
               </Select>
 
-              <Input placeholder="Shipment ID to assign" value={shipmentId} onChange={(e) => setShipmentId(e.target.value)} />
+              <Select value={shipmentId} onChange={(e) => setShipmentId(e.target.value)}>
+                <option value="">Select shipment</option>
+                {shipments.map((shipment) => (
+                  <option key={shipment.id} value={shipment.id}>
+                    {shipment.id} · {shipment.origin_country_default} → {shipment.destination_country ?? "-"} · {shipment.status}
+                  </option>
+                ))}
+              </Select>
               <Button
                 variant="secondary"
                 onClick={() => {
