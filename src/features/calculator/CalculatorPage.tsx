@@ -34,6 +34,13 @@ interface CalculationResponse {
   warnings?: string[];
 }
 
+const formatNumber = (value?: string | number | null) => {
+  if (value === null || value === undefined || value === "") return "-";
+  const num = typeof value === "number" ? value : Number(value);
+  if (Number.isNaN(num)) return String(value);
+  return num.toLocaleString("en-GB", { maximumFractionDigits: 6 });
+};
+
 export function CalculatorPage() {
   const { push } = useToast();
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
@@ -133,35 +140,35 @@ export function CalculatorPage() {
             <div className="grid gap-4 md:grid-cols-3">
               <div>
                 <p className="text-xs text-slate-500">Customs value</p>
-                <p className="text-lg font-semibold">{calculateMutation.data.breakdown?.customs_value ?? "-"}</p>
+                <p className="text-lg font-semibold">{formatNumber(calculateMutation.data.breakdown?.customs_value)}</p>
               </div>
               <div>
                 <p className="text-xs text-slate-500">Duty total</p>
-                <p className="text-lg font-semibold">{calculateMutation.data.breakdown?.duty_total ?? "-"}</p>
+                <p className="text-lg font-semibold">{formatNumber(calculateMutation.data.breakdown?.duty_total)}</p>
               </div>
               <div>
                 <p className="text-xs text-slate-500">VAT total</p>
-                <p className="text-lg font-semibold">{calculateMutation.data.breakdown?.vat_total ?? "-"}</p>
+                <p className="text-lg font-semibold">{formatNumber(calculateMutation.data.breakdown?.vat_total)}</p>
               </div>
               <div>
                 <p className="text-xs text-slate-500">VAT base</p>
-                <p className="text-lg font-semibold">{calculateMutation.data.breakdown?.vat_base ?? "-"}</p>
+                <p className="text-lg font-semibold">{formatNumber(calculateMutation.data.breakdown?.vat_base)}</p>
               </div>
               <div>
                 <p className="text-xs text-slate-500">Authorities total</p>
-                <p className="text-lg font-semibold">{calculateMutation.data.breakdown?.authorities_total ?? "-"}</p>
+                <p className="text-lg font-semibold">{formatNumber(calculateMutation.data.breakdown?.authorities_total)}</p>
               </div>
               <div>
                 <p className="text-xs text-slate-500">Other duties</p>
-                <p className="text-lg font-semibold">{calculateMutation.data.breakdown?.other_duties_total ?? "-"}</p>
+                <p className="text-lg font-semibold">{formatNumber(calculateMutation.data.breakdown?.other_duties_total)}</p>
               </div>
               <div>
                 <p className="text-xs text-slate-500">Landed cost total</p>
-                <p className="text-lg font-semibold">{calculateMutation.data.breakdown?.landed_cost_total ?? "-"}</p>
+                <p className="text-lg font-semibold">{formatNumber(calculateMutation.data.breakdown?.landed_cost_total)}</p>
               </div>
               <div>
                 <p className="text-xs text-slate-500">Cost per unit</p>
-                <p className="text-lg font-semibold">{calculateMutation.data.breakdown?.landed_cost_per_unit ?? "-"}</p>
+                <p className="text-lg font-semibold">{formatNumber(calculateMutation.data.breakdown?.landed_cost_per_unit)}</p>
               </div>
             </div>
 
@@ -182,9 +189,9 @@ export function CalculatorPage() {
                     <TableRow key={item.item_id ?? idx}>
                       <TableCell>{item.item_id ?? "-"}</TableCell>
                       <TableCell>{item.hs_code ?? "-"}</TableCell>
-                      <TableCell>{item.customs_value ?? "-"}</TableCell>
-                      <TableCell>{item.duty_rate ?? "-"}</TableCell>
-                      <TableCell>{item.duty_amount ?? "-"}</TableCell>
+                      <TableCell>{formatNumber(item.customs_value)}</TableCell>
+                      <TableCell>{formatNumber(item.duty_rate)}</TableCell>
+                      <TableCell>{formatNumber(item.duty_amount)}</TableCell>
                     </TableRow>
                   )) ?? (
                     <TableRow>
