@@ -63,6 +63,8 @@ export function InvoicesPage() {
   const [passportItemId, setPassportItemId] = React.useState("");
   const [passportQty, setPassportQty] = React.useState("");
   const [passportUnitPrice, setPassportUnitPrice] = React.useState("");
+  const [uploadFile, setUploadFile] = React.useState<File | null>(null);
+  const [uploadProgress, setUploadProgress] = React.useState(0);
 
   const incotermOptions = ["EXW", "FCA", "CPT", "CIP", "DAP", "DPU", "DDP", "FAS", "FOB", "CFR", "CIF"];
   const freightIncludedTerms = new Set(["CFR", "CIF", "CPT", "CIP", "DAP", "DPU", "DDP"]);
@@ -126,6 +128,8 @@ export function InvoicesPage() {
       push({ title: "Uploaded", description: `Invoice ${data.invoice_number ?? data.id} ready for review`, variant: "success" });
       setSelectedId(data.id);
       listQuery.refetch();
+      setUploadFile(null);
+      setUploadProgress(100);
     },
     onError: (error: Error) => push({ title: "Upload failed", description: error.message, variant: "error" })
   });
@@ -158,6 +162,27 @@ export function InvoicesPage() {
     onSuccess: () => {
       push({ title: "Added", description: "Passport item added to invoice", variant: "success" });
       listQuery.refetch();
+    },
+    onError: (error: Error) => {
+      push({ title: "Failed", description: error.message, variant: "error" });
+    }
+  });
+
+  const addItemsToPassportMutation = useMutation({
+    mutationFn: async (payload: { invoice: InvoiceRead }) => {
+      const requests = payload.invoice.items.map((item) =>
+        api.post("/passport", {
+          name: item.description,
+          description: item.description,
+          hs_code: item.hs_code ?? undefined,
+          supplier: payload.invoice.supplier_name ?? undefined,
+          notes: `Imported from invoice ${payload.invoice.invoice_number ?? payload.invoice.id}`
+        })
+      );
+      return Promise.all(requests);
+    },
+    onSuccess: () => {
+      push({ title: "Passport updated", description: "Invoice items added to passport library", variant: "success" });
     },
     onError: (error: Error) => {
       push({ title: "Failed", description: error.message, variant: "error" });
@@ -233,12 +258,41 @@ export function InvoicesPage() {
         <CardHeader>
           <CardTitle>Upload invoice</CardTitle>
         </CardHeader>
-        <CardContent className="flex flex-wrap items-center gap-4">
-          <Input type="file" accept=".pdf,.doc,.docx" onChange={(event) => {
-            const file = event.target.files?.[0];
-            if (file) uploadMutation.mutate(file);
-          }} />
-          <Button variant="outline" onClick={() => setSelectedId(mockData.invoices[0]?.id ?? null)}>Use demo invoice</Button>
+        <CardContent className="space-y-4">
+          <div className="flex flex-wrap items-center gap-4">
+            <Input
+              type="file"
+              accept=".pdf,.doc,.docx"
+              onChange={(event) => {
+                const file = event.target.files?.[0] ?? null;
+                setUploadFile(file);
+                setUploadProgress(0);
+              }}
+            />
+            <Button
+              variant="secondary"
+              disabled={!uploadFile || uploadMutation.isPending}
+              onClick={() => {
+                if (!uploadFile) {
+                  push({ title: "Select a file", description: "Choose an invoice to extract", variant: "error" });
+                  return;
+                }
+                setUploadProgress(20);
+                uploadMutation.mutate(uploadFile);
+                const interval = window.setInterval(() => {
+                  setUploadProgress((prev) => (prev >= 90 ? prev : prev + 10));
+                }, 300);
+                setTimeout(() => window.clearInterval(interval), 3000);
+              }}
+            >
+              {uploadMutation.isPending ? "Extracting..." : "Start extraction"}
+            </Button>
+          </div>
+          {uploadMutation.isPending && (
+            <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">
+              <div className="h-full bg-brand-600 transition-all" style={{ width: `${uploadProgress}%` }} />
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -423,6 +477,21 @@ export function InvoicesPage() {
                 Save edits
               </Button>
               <Badge>Edits staged</Badge>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  if (!draft.items.length) {
+                    push({ title: "No items", description: "Invoice has no items to add", variant: "error" });
+                    return;
+                  }
+                  addItemsToPassportMutation.mutate({ invoice: draft });
+                }}
+              >
+                Add items to passport
+              </Button>
             </div>
 
             <div className="grid gap-3 md:grid-cols-3">
