@@ -4,12 +4,12 @@ import { api, apiUpload } from "@/lib/api/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/toaster";
 import { mockData, useMocks } from "@/lib/mock";
+import { Select } from "@/components/ui/select";
 
 interface InvoiceItemRead {
   id: string;
@@ -49,17 +49,33 @@ interface InvoiceRead {
   items: InvoiceItemRead[];
 }
 
+interface PassportItem {
+  id: string;
+  name: string;
+  hs_code: string | null;
+}
+
 export function InvoicesPage() {
   const { push } = useToast();
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
   const [shipmentId, setShipmentId] = React.useState("");
   const [draft, setDraft] = React.useState<InvoiceRead | null>(null);
+  const [passportItemId, setPassportItemId] = React.useState("");
+  const [passportQty, setPassportQty] = React.useState("");
+  const [passportUnitPrice, setPassportUnitPrice] = React.useState("");
 
   const listQuery = useQuery({
     queryKey: ["invoices"],
     queryFn: () => api.get<InvoiceRead[]>("/invoices"),
     enabled: !useMocks,
     initialData: useMocks ? mockData.invoices : undefined
+  });
+
+  const passportQuery = useQuery({
+    queryKey: ["passport"],
+    queryFn: () => api.get<PassportItem[]>("/passport"),
+    enabled: !useMocks,
+    initialData: useMocks ? mockData.passportItems : undefined
   });
 
   const shipmentsQuery = useQuery({
@@ -116,6 +132,22 @@ export function InvoicesPage() {
     onSuccess: () => {
       push({ title: "Assigned", description: "Invoice linked to shipment", variant: "success" });
       listQuery.refetch();
+    }
+  });
+
+  const addFromPassportMutation = useMutation({
+    mutationFn: (payload: { invoiceId: string; passportItemId: string; quantity?: string; unitPrice?: string }) =>
+      api.post(
+        `/invoices/${payload.invoiceId}/items/from-passport?passport_item_id=${payload.passportItemId}${
+          payload.quantity ? `&quantity=${payload.quantity}` : ""
+        }${payload.unitPrice ? `&unit_price=${payload.unitPrice}` : ""}`
+      ),
+    onSuccess: () => {
+      push({ title: "Added", description: "Passport item added to invoice", variant: "success" });
+      listQuery.refetch();
+    },
+    onError: (error: Error) => {
+      push({ title: "Failed", description: error.message, variant: "error" });
     }
   });
 
@@ -348,6 +380,37 @@ export function InvoicesPage() {
                 Save edits
               </Button>
               <Badge>Edits staged</Badge>
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-3">
+              <Select value={passportItemId} onChange={(e) => setPassportItemId(e.target.value)}>
+                <option value="">Add from passport</option>
+                {passportQuery.data?.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.name} {item.hs_code ? `· ${item.hs_code}` : ""}
+                  </option>
+                ))}
+              </Select>
+              <Input placeholder="Quantity (optional)" value={passportQty} onChange={(e) => setPassportQty(e.target.value)} />
+              <Input placeholder="Unit price (optional)" value={passportUnitPrice} onChange={(e) => setPassportUnitPrice(e.target.value)} />
+              <Button
+                className="md:col-span-3"
+                variant="secondary"
+                onClick={() => {
+                  if (!passportItemId) {
+                    push({ title: "Missing passport item", description: "Select a passport item", variant: "error" });
+                    return;
+                  }
+                  addFromPassportMutation.mutate({
+                    invoiceId: draft.id,
+                    passportItemId,
+                    quantity: passportQty || undefined,
+                    unitPrice: passportUnitPrice || undefined
+                  });
+                }}
+              >
+                Add item from passport
+              </Button>
             </div>
 
             <div className="grid gap-3 md:grid-cols-3">

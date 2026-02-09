@@ -32,6 +32,8 @@ export function CollaborationPage() {
   const [licenseFile, setLicenseFile] = useState<File | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValues, setEditValues] = useState<Partial<LicenseItem>>({});
+  const [bulkShipmentId, setBulkShipmentId] = useState("");
+  const [selectedBulkIds, setSelectedBulkIds] = useState<string[]>([]);
 
   const uploadForm = useForm({
     defaultValues: {
@@ -95,6 +97,35 @@ export function CollaborationPage() {
     },
     onError: (error: Error) => {
       push({ title: "Update failed", description: error.message, variant: "error" });
+    }
+  });
+
+  const bulkAssignMutation = useMutation({
+    mutationFn: (payload: { shipment_id: string; license_ids: string[] }) =>
+      api.post<LicenseItem[]>(`/licenses/assign/bulk?shipment_id=${payload.shipment_id}`, { license_ids: payload.license_ids }),
+    onSuccess: () => {
+      push({ title: "Assigned", description: "Licenses linked to shipment", variant: "success" });
+      setSelectedBulkIds([]);
+    },
+    onError: (error: Error) => {
+      push({ title: "Assign failed", description: error.message, variant: "error" });
+    }
+  });
+
+  const bulkUnassignMutation = useMutation({
+    mutationFn: async (payload: { shipment_id: string; license_ids: string[] }) => {
+      await Promise.all(
+        payload.license_ids.map((licenseId) =>
+          api.delete(`/licenses/assign?shipment_id=${payload.shipment_id}&license_id=${licenseId}`)
+        )
+      );
+    },
+    onSuccess: () => {
+      push({ title: "Unassigned", description: "Licenses removed from shipment", variant: "success" });
+      setSelectedBulkIds([]);
+    },
+    onError: (error: Error) => {
+      push({ title: "Unassign failed", description: error.message, variant: "error" });
     }
   });
 
@@ -185,12 +216,57 @@ export function CollaborationPage() {
 
       <Card>
         <CardHeader>
+          <CardTitle>Bulk license attach / detach</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <Select value={bulkShipmentId} onChange={(e) => setBulkShipmentId(e.target.value)}>
+            <option value="">Select shipment</option>
+            {shipmentsQuery.data?.shipments?.map((shipment) => (
+              <option key={shipment.id} value={shipment.id}>
+                {shipment.id} · {shipment.origin_country_default} → {shipment.destination_country ?? "-"} · {shipment.status}
+              </option>
+            ))}
+          </Select>
+          <div className="flex flex-wrap gap-3">
+            <Button
+              variant="secondary"
+              onClick={() => {
+                if (!bulkShipmentId || selectedBulkIds.length === 0) {
+                  push({ title: "Missing fields", description: "Select shipment and licenses", variant: "error" });
+                  return;
+                }
+                bulkAssignMutation.mutate({ shipment_id: bulkShipmentId, license_ids: selectedBulkIds });
+              }}
+            >
+              Bulk assign
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => {
+                if (!bulkShipmentId || selectedBulkIds.length === 0) {
+                  push({ title: "Missing fields", description: "Select shipment and licenses", variant: "error" });
+                  return;
+                }
+                bulkUnassignMutation.mutate({ shipment_id: bulkShipmentId, license_ids: selectedBulkIds });
+              }}
+            >
+              Bulk unassign
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
           <CardTitle>Licenses</CardTitle>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>
+                  <span className="text-xs">Select</span>
+                </TableHead>
                 <TableHead>Type</TableHead>
                 <TableHead>Number</TableHead>
                 <TableHead>Issuer</TableHead>
@@ -202,6 +278,17 @@ export function CollaborationPage() {
             <TableBody>
               {listQuery.data?.map((license) => (
                 <TableRow key={license.id}>
+                  <TableCell>
+                    <input
+                      type="checkbox"
+                      checked={selectedBulkIds.includes(license.id)}
+                      onChange={(e) => {
+                        setSelectedBulkIds((prev) =>
+                          e.target.checked ? [...prev, license.id] : prev.filter((id) => id !== license.id)
+                        );
+                      }}
+                    />
+                  </TableCell>
                   {editingId === license.id ? (
                     <>
                       <TableCell>

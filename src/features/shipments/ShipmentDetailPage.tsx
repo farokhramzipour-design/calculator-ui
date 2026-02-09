@@ -8,6 +8,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { useForm } from "react-hook-form";
 import { mockData, useMocks } from "@/lib/mock";
+import { Select } from "@/components/ui/select";
+import { useToast } from "@/components/ui/toaster";
 
 interface ShipmentDetail {
   id: string;
@@ -45,6 +47,7 @@ interface InvoiceRead {
 }
 
 export function ShipmentDetailPage() {
+  const { push } = useToast();
   const { id } = useParams();
   const detailQuery = useQuery({
     queryKey: ["shipment", id],
@@ -59,6 +62,13 @@ export function ShipmentDetailPage() {
     initialData: useMocks ? mockData.invoices : undefined
   });
 
+  const passportQuery = useQuery({
+    queryKey: ["passport"],
+    queryFn: () => api.get<Array<{ id: string; name: string; hs_code: string | null }>>("/passport"),
+    enabled: !useMocks,
+    initialData: useMocks ? mockData.passportItems : undefined
+  });
+
   const itemForm = useForm({
     defaultValues: { description: "", hs_code: "", quantity: 0, unit_price: 0, origin_country: "" }
   });
@@ -68,8 +78,24 @@ export function ShipmentDetailPage() {
     onSuccess: () => detailQuery.refetch()
   });
 
+  const addFromPassport = useMutation({
+    mutationFn: (payload: { passportItemId: string; quantity: string; unitPrice: string }) =>
+      api.post(`/shipments/${id}/items/from-passport?passport_item_id=${payload.passportItemId}&quantity=${payload.quantity}&unit_price=${payload.unitPrice}`),
+    onSuccess: () => {
+      push({ title: "Added", description: "Passport item added to shipment", variant: "success" });
+      detailQuery.refetch();
+    },
+    onError: (error: Error) => {
+      push({ title: "Failed", description: error.message, variant: "error" });
+    }
+  });
+
   const costsForm = useForm({
     defaultValues: { freight_amount: "", insurance_amount: "" }
+  });
+
+  const passportForm = useForm({
+    defaultValues: { passport_item_id: "", quantity: "", unit_price: "" }
   });
 
   const upsertCosts = useMutation({
@@ -80,6 +106,7 @@ export function ShipmentDetailPage() {
   const shipment = detailQuery.data;
   const invoices = useMocks ? mockData.invoices : invoicesQuery.data ?? [];
   const linkedInvoice = invoices.find((inv) => inv.shipment_id === id) ?? null;
+  const passportItems = passportQuery.data ?? [];
 
   const applyInvoiceToShipment = () => {
     if (!linkedInvoice) return;
@@ -152,6 +179,33 @@ export function ShipmentDetailPage() {
             <Input type="number" placeholder="Unit price" {...itemForm.register("unit_price")} />
             <Input placeholder="Origin" {...itemForm.register("origin_country")} />
             <Button type="submit" className="md:col-span-5">Add item</Button>
+          </form>
+
+          <form
+            className="grid gap-4 md:grid-cols-4"
+            onSubmit={passportForm.handleSubmit((values) => {
+              if (!values.passport_item_id || !values.quantity || !values.unit_price) {
+                push({ title: "Missing fields", description: "Select passport item, quantity, unit price", variant: "error" });
+                return;
+              }
+              addFromPassport.mutate({
+                passportItemId: values.passport_item_id,
+                quantity: values.quantity,
+                unitPrice: values.unit_price
+              });
+            })}
+          >
+            <Select {...passportForm.register("passport_item_id")}>
+              <option value="">Add from passport</option>
+              {passportItems.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.name} {item.hs_code ? `· ${item.hs_code}` : ""}
+                </option>
+              ))}
+            </Select>
+            <Input placeholder="Quantity" {...passportForm.register("quantity")} />
+            <Input placeholder="Unit price" {...passportForm.register("unit_price")} />
+            <Button type="submit" variant="secondary">Add from passport</Button>
           </form>
         </CardContent>
       </Card>

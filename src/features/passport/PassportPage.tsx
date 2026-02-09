@@ -8,6 +8,7 @@ import { useForm } from "react-hook-form";
 import { mockData, useMocks } from "@/lib/mock";
 import { useToast } from "@/components/ui/toaster";
 import { useNavigate } from "react-router-dom";
+import { Select } from "@/components/ui/select";
 import React, { useState } from "react";
 
 interface PassportItem {
@@ -22,15 +23,43 @@ interface PassportItem {
   notes: string | null;
 }
 
+interface ShipmentList {
+  shipments: Array<{ id: string; origin_country_default: string; destination_country: string | null; status: string }>;
+}
+
+interface InvoiceRead {
+  id: string;
+  invoice_number: string | null;
+  supplier_name: string | null;
+}
+
 export function PassportPage() {
   const { push } = useToast();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const navigate = useNavigate();
+  const [shipmentId, setShipmentId] = useState("");
+  const [invoiceId, setInvoiceId] = useState("");
+  const [quantity, setQuantity] = useState("");
+  const [unitPrice, setUnitPrice] = useState("");
   const listQuery = useQuery({
     queryKey: ["passport"],
     queryFn: () => api.get<PassportItem[]>("/passport"),
     enabled: !useMocks,
     initialData: useMocks ? mockData.passportItems : undefined
+  });
+
+  const shipmentsQuery = useQuery({
+    queryKey: ["shipments"],
+    queryFn: () => api.get<ShipmentList>("/shipments"),
+    enabled: !useMocks,
+    initialData: useMocks ? mockData.shipments : undefined
+  });
+
+  const invoicesQuery = useQuery({
+    queryKey: ["invoices"],
+    queryFn: () => api.get<InvoiceRead[]>("/invoices"),
+    enabled: !useMocks,
+    initialData: useMocks ? mockData.invoices : undefined
   });
 
   const form = useForm({
@@ -68,7 +97,37 @@ export function PassportPage() {
     }
   });
 
+  const addToShipmentMutation = useMutation({
+    mutationFn: (payload: { shipmentId: string; passportItemId: string; quantity: string; unitPrice: string }) =>
+      api.post(
+        `/shipments/${payload.shipmentId}/items/from-passport?passport_item_id=${payload.passportItemId}&quantity=${payload.quantity}&unit_price=${payload.unitPrice}`
+      ),
+    onSuccess: () => {
+      push({ title: "Added", description: "Passport item added to shipment", variant: "success" });
+    },
+    onError: (error: Error) => {
+      push({ title: "Failed", description: error.message, variant: "error" });
+    }
+  });
+
+  const addToInvoiceMutation = useMutation({
+    mutationFn: (payload: { invoiceId: string; passportItemId: string; quantity?: string; unitPrice?: string }) =>
+      api.post(
+        `/invoices/${payload.invoiceId}/items/from-passport?passport_item_id=${payload.passportItemId}${
+          payload.quantity ? `&quantity=${payload.quantity}` : ""
+        }${payload.unitPrice ? `&unit_price=${payload.unitPrice}` : ""}`
+      ),
+    onSuccess: () => {
+      push({ title: "Added", description: "Passport item added to invoice", variant: "success" });
+    },
+    onError: (error: Error) => {
+      push({ title: "Failed", description: error.message, variant: "error" });
+    }
+  });
+
   const selected = listQuery.data?.find((item) => item.id === selectedId) ?? null;
+  const shipments = shipmentsQuery.data?.shipments ?? [];
+  const invoices = invoicesQuery.data ?? [];
 
   React.useEffect(() => {
     if (selected) {
@@ -186,6 +245,57 @@ export function PassportPage() {
                 </Button>
               </div>
             </form>
+          </CardContent>
+        </Card>
+      )}
+
+      {selected && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Use passport item</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-3 md:grid-cols-4">
+            <Select value={shipmentId} onChange={(e) => setShipmentId(e.target.value)}>
+              <option value="">Select shipment</option>
+              {shipments.map((shipment) => (
+                <option key={shipment.id} value={shipment.id}>
+                  {shipment.id} · {shipment.origin_country_default} → {shipment.destination_country ?? "-"} · {shipment.status}
+                </option>
+              ))}
+            </Select>
+            <Input placeholder="Quantity" value={quantity} onChange={(e) => setQuantity(e.target.value)} />
+            <Input placeholder="Unit price" value={unitPrice} onChange={(e) => setUnitPrice(e.target.value)} />
+            <Button
+              onClick={() => {
+                if (!shipmentId || !quantity || !unitPrice) {
+                  push({ title: "Missing fields", description: "Select shipment, quantity, unit price", variant: "error" });
+                  return;
+                }
+                addToShipmentMutation.mutate({ shipmentId, passportItemId: selected.id, quantity, unitPrice });
+              }}
+            >
+              Add to shipment
+            </Button>
+            <Select value={invoiceId} onChange={(e) => setInvoiceId(e.target.value)} className="md:col-span-2">
+              <option value="">Select invoice (optional)</option>
+              {invoices.map((invoice) => (
+                <option key={invoice.id} value={invoice.id}>
+                  {invoice.invoice_number ?? invoice.id} · {invoice.supplier_name ?? "-"}
+                </option>
+              ))}
+            </Select>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                if (!invoiceId) {
+                  push({ title: "Invoice required", description: "Select invoice", variant: "error" });
+                  return;
+                }
+                addToInvoiceMutation.mutate({ invoiceId, passportItemId: selected.id, quantity, unitPrice });
+              }}
+            >
+              Add to invoice
+            </Button>
           </CardContent>
         </Card>
       )}
