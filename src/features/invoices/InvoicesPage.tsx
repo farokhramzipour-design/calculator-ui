@@ -65,6 +65,17 @@ export function InvoicesPage() {
   const [passportUnitPrice, setPassportUnitPrice] = React.useState("");
 
   const incotermOptions = ["EXW", "FCA", "CPT", "CIP", "DAP", "DPU", "DDP", "FAS", "FOB", "CFR", "CIF"];
+  const freightIncludedTerms = new Set(["CFR", "CIF", "CPT", "CIP", "DAP", "DPU", "DDP"]);
+  const insuranceIncludedTerms = new Set(["CIF", "CIP", "DDP"]);
+
+  const freightLocked = draft?.incoterm ? freightIncludedTerms.has(draft.incoterm) : false;
+  const insuranceLocked = draft?.incoterm ? insuranceIncludedTerms.has(draft.incoterm) : false;
+
+  React.useEffect(() => {
+    if (!draft) return;
+    if (freightLocked) updateField("freight", "0");
+    if (insuranceLocked) updateField("insurance", "0");
+  }, [draft, freightLocked, insuranceLocked]);
 
   const listQuery = useQuery({
     queryKey: ["invoices"],
@@ -327,11 +338,21 @@ export function InvoicesPage() {
               </div>
               <div>
                 <p className="text-xs text-slate-500">Freight</p>
-                <Input value={draft.freight ?? ""} onChange={(e) => updateField("freight", e.target.value)} />
+                <Input
+                  value={draft.freight ?? ""}
+                  readOnly={freightLocked}
+                  placeholder={freightLocked ? "Included (0)" : "Freight"}
+                  onChange={(e) => updateField("freight", e.target.value)}
+                />
               </div>
               <div>
                 <p className="text-xs text-slate-500">Insurance</p>
-                <Input value={draft.insurance ?? ""} onChange={(e) => updateField("insurance", e.target.value)} />
+                <Input
+                  value={draft.insurance ?? ""}
+                  readOnly={insuranceLocked}
+                  placeholder={insuranceLocked ? "Included (0)" : "Insurance"}
+                  onChange={(e) => updateField("insurance", e.target.value)}
+                />
               </div>
               <div>
                 <p className="text-xs text-slate-500">Tax total</p>
