@@ -208,7 +208,7 @@ export function ShipmentDetailPage() {
             <Input placeholder="Description" {...itemForm.register("description")} />
             <Input placeholder="HS code" {...itemForm.register("hs_code")} />
             <Input type="number" placeholder="Qty" {...itemForm.register("quantity")} />
-            <Input type="number" placeholder="Unit price" {...itemForm.register("unit_price")} />
+            <Input type="number" step="0.01" placeholder="Unit price" {...itemForm.register("unit_price")} />
             <Input placeholder="Origin" {...itemForm.register("origin_country")} />
             <Button type="submit" className="md:col-span-5">Add item</Button>
           </form>
@@ -277,7 +277,7 @@ export function ShipmentDetailPage() {
               ))}
             </Select>
             <Input placeholder="Quantity" {...passportForm.register("quantity")} />
-            <Input placeholder="Unit price" {...passportForm.register("unit_price")} />
+            <Input type="number" step="0.01" placeholder="Unit price" {...passportForm.register("unit_price")} />
             <Button type="submit" variant="secondary">Add from passport</Button>
           </form>
         </CardContent>

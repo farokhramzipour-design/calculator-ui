@@ -393,7 +393,12 @@ export function InvoicesPage() {
                       <Input value={item.quantity ?? ""} onChange={(e) => updateItemField(item.id, "quantity", e.target.value)} />
                     </TableCell>
                     <TableCell>
-                      <Input value={item.unit_price ?? ""} onChange={(e) => updateItemField(item.id, "unit_price", e.target.value)} />
+                      <Input
+                        type="number"
+                        step="0.01"
+                        value={item.unit_price ?? ""}
+                        onChange={(e) => updateItemField(item.id, "unit_price", e.target.value)}
+                      />
                     </TableCell>
                     <TableCell>
                       <Input value={item.net_weight ?? ""} onChange={(e) => updateItemField(item.id, "net_weight", e.target.value)} />
@@ -430,7 +435,13 @@ export function InvoicesPage() {
                 ))}
               </Select>
               <Input placeholder="Quantity (optional)" value={passportQty} onChange={(e) => setPassportQty(e.target.value)} />
-              <Input placeholder="Unit price (optional)" value={passportUnitPrice} onChange={(e) => setPassportUnitPrice(e.target.value)} />
+              <Input
+                type="number"
+                step="0.01"
+                placeholder="Unit price (optional)"
+                value={passportUnitPrice}
+                onChange={(e) => setPassportUnitPrice(e.target.value)}
+              />
               <Button
                 className="md:col-span-3"
                 variant="secondary"

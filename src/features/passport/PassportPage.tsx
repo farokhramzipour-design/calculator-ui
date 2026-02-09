@@ -253,7 +253,13 @@ export function PassportPage() {
               ))}
             </Select>
             <Input placeholder="Quantity" value={quantity} onChange={(e) => setQuantity(e.target.value)} />
-            <Input placeholder="Unit price" value={unitPrice} onChange={(e) => setUnitPrice(e.target.value)} />
+            <Input
+              type="number"
+              step="0.01"
+              placeholder="Unit price"
+              value={unitPrice}
+              onChange={(e) => setUnitPrice(e.target.value)}
+            />
             <Button
               onClick={() => {
                 if (!shipmentId || !quantity || !unitPrice) {
