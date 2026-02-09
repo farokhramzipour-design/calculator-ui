@@ -146,9 +146,28 @@ export function InvoicesPage() {
   const assignMutation = useMutation({
     mutationFn: (payload: { invoice_id: string; shipment_id: string }) =>
       api.post<InvoiceRead>(`/invoices/assign?shipment_id=${payload.shipment_id}`, { invoice_id: payload.invoice_id }),
-    onSuccess: () => {
+    onSuccess: async (data) => {
       push({ title: "Assigned", description: "Invoice linked to shipment", variant: "success" });
       listQuery.refetch();
+      if (data?.shipment_id && data.items?.length) {
+        try {
+          await Promise.all(
+            data.items.map((item) =>
+              api.post(`/shipments/${data.shipment_id}/items`, {
+                description: item.description,
+                hs_code: item.hs_code ?? "",
+                origin_country: item.origin_country ?? "",
+                quantity: item.quantity ?? 0,
+                unit_price: item.unit_price ?? 0
+              })
+            )
+          );
+          push({ title: "Items added", description: "Invoice items added to shipment", variant: "success" });
+        } catch (error) {
+          const message = error instanceof Error ? error.message : "Failed to add items";
+          push({ title: "Item sync failed", description: message, variant: "error" });
+        }
+      }
     }
   });
 
