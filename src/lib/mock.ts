@@ -18,6 +18,14 @@ export const mockData = {
       }
     ]
   },
+  countries: {
+    countries: [
+      { id: "c1", code: "GB", name: "United Kingdom", region: "EU_non_EU" },
+      { id: "c2", code: "DE", name: "Germany", region: "EU" },
+      { id: "c3", code: "FR", name: "France", region: "EU" },
+      { id: "c4", code: "IS", name: "Iceland", region: "EEA_non_EU" }
+    ]
+  },
   complianceTasks: [
     { id: "c1", title: "REACH certificate check", due: "2026-02-10", severity: "High", status: "Open" },
     { id: "c2", title: "Supplier origin proof", due: "2026-02-12", severity: "Medium", status: "In Progress" }

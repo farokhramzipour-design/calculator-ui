@@ -332,13 +332,22 @@ export function CalculatorPage() {
                   <Select {...form.register("incoterm")}>
                     <option value="EXW">EXW</option>
                     <option value="FOB">FOB</option>
+                    <option value="FAS">FAS</option>
+                    <option value="CFR">CFR</option>
                     <option value="CIF">CIF</option>
                     <option value="DDP">DDP</option>
                     <option value="FCA">FCA</option>
                     <option value="CPT">CPT</option>
                     <option value="CIP">CIP</option>
                     <option value="DAP">DAP</option>
+                    <option value="DPU">DPU</option>
                   </Select>
+                  {incotermHints[incoterm] && (
+                    <Alert className="mt-2" variant="default">
+                      <p className="font-medium">{incotermHints[incoterm].title}</p>
+                      <p>{incotermHints[incoterm].detail}</p>
+                    </Alert>
+                  )}
                 </div>
                 <div>
                   <label className="text-xs font-medium text-slate-600">Currency</label>
@@ -592,3 +601,16 @@ export function CalculatorPage() {
     </div>
   );
 }
+  const incotermHints: Record<string, { title: string; detail: string }> = {
+    EXW: { title: "EXW — Ex Works", detail: "Seller makes goods available at origin. Buyer handles export, freight, insurance. Add freight + insurance to customs value." },
+    FCA: { title: "FCA — Free Carrier", detail: "Seller delivers to carrier and clears export. Buyer pays main transport and insurance." },
+    CPT: { title: "CPT — Carriage Paid To", detail: "Seller pays freight, risk transfers at carrier. Insurance usually not included." },
+    CIP: { title: "CIP — Carriage & Insurance Paid To", detail: "Seller pays freight + insurance to destination. Risk transfers at carrier." },
+    DAP: { title: "DAP — Delivered At Place", detail: "Seller delivers ready for unloading. Buyer pays import duty/VAT/clearance." },
+    DPU: { title: "DPU — Delivered At Place Unloaded", detail: "Seller delivers and unloads at destination. Buyer handles import clearance/duties." },
+    DDP: { title: "DDP — Delivered Duty Paid", detail: "Seller pays freight, insurance, duty, VAT. Avoid double-counting duties." },
+    FAS: { title: "FAS — Free Alongside Ship", detail: "Sea/inland only. Seller places goods alongside vessel. Buyer loads and pays main transport/insurance." },
+    FOB: { title: "FOB — Free On Board", detail: "Sea/inland only. Risk transfers onboard. Often misused for containers; confirm." },
+    CFR: { title: "CFR — Cost & Freight", detail: "Sea/inland only. Seller pays freight, risk transfers at port of origin. Insurance not included." },
+    CIF: { title: "CIF — Cost, Insurance, Freight", detail: "Sea/inland only. Seller pays freight + insurance; risk transfers at port of origin." }
+  };
