@@ -64,6 +64,8 @@ export function InvoicesPage() {
   const [passportQty, setPassportQty] = React.useState("");
   const [passportUnitPrice, setPassportUnitPrice] = React.useState("");
 
+  const incotermOptions = ["EXW", "FCA", "CPT", "CIP", "DAP", "DPU", "DDP", "FAS", "FOB", "CFR", "CIF"];
+
   const listQuery = useQuery({
     queryKey: ["invoices"],
     queryFn: () => api.get<InvoiceRead[]>("/invoices"),
@@ -286,7 +288,22 @@ export function InvoicesPage() {
               </div>
               <div>
                 <p className="text-xs text-slate-500">Incoterm</p>
-                <Input value={draft.incoterm ?? ""} onChange={(e) => updateField("incoterm", e.target.value)} />
+                <Select
+                  value={draft.incoterm ?? ""}
+                  onChange={(e) => updateField("incoterm", e.target.value)}
+                >
+                  <option value="">Select Incoterm</option>
+                  {draft.incoterm && !incotermOptions.includes(draft.incoterm) && (
+                    <option value={draft.incoterm}>
+                      Unknown ({draft.incoterm})
+                    </option>
+                  )}
+                  {incotermOptions.map((term) => (
+                    <option key={term} value={term}>
+                      {term}
+                    </option>
+                  ))}
+                </Select>
               </div>
               <div>
                 <p className="text-xs text-slate-500">Subtotal</p>
