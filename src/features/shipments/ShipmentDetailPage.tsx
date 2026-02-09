@@ -55,6 +55,13 @@ interface InvoiceRead {
   }>;
 }
 
+const formatNumber = (value?: string | number | null) => {
+  if (value === null || value === undefined || value === "") return "-";
+  const num = typeof value === "number" ? value : Number(value);
+  if (Number.isNaN(num)) return String(value);
+  return num.toLocaleString("en-GB", { maximumFractionDigits: 6 });
+};
+
 export function ShipmentDetailPage() {
   const { push } = useToast();
   const { id } = useParams();
@@ -252,10 +259,10 @@ export function ShipmentDetailPage() {
                     <Input defaultValue={item.hs_code} onChange={(e) => (item.hs_code = e.target.value)} />
                   </TableCell>
                   <TableCell>
-                    <Input defaultValue={item.quantity} onChange={(e) => (item.quantity = e.target.value)} />
+                    <Input defaultValue={formatNumber(item.quantity)} onChange={(e) => (item.quantity = e.target.value)} />
                   </TableCell>
                   <TableCell>
-                    <Input defaultValue={item.unit_price} onChange={(e) => (item.unit_price = e.target.value)} />
+                    <Input defaultValue={formatNumber(item.unit_price)} onChange={(e) => (item.unit_price = e.target.value)} />
                   </TableCell>
                   <TableCell>
                     <Input defaultValue={item.origin_country} onChange={(e) => (item.origin_country = e.target.value)} />
@@ -431,13 +438,13 @@ export function ShipmentDetailPage() {
               </TableHeader>
               <TableBody>
                 {linkedInvoice.items.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell>{item.description}</TableCell>
-                    <TableCell>{item.hs_code ?? "-"}</TableCell>
-                    <TableCell>{item.quantity ?? "-"}</TableCell>
-                    <TableCell>{item.unit_price ?? "-"}</TableCell>
-                  </TableRow>
-                ))}
+                <TableRow key={item.id}>
+                  <TableCell>{item.description}</TableCell>
+                  <TableCell>{item.hs_code ?? "-"}</TableCell>
+                  <TableCell>{formatNumber(item.quantity)}</TableCell>
+                  <TableCell>{formatNumber(item.unit_price)}</TableCell>
+                </TableRow>
+              ))}
               </TableBody>
             </Table>
             <Button variant="secondary" onClick={applyInvoiceToShipment}>Load invoice data into shipment</Button>
