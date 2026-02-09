@@ -23,7 +23,17 @@ export const mockData = {
     { id: "c2", title: "Supplier origin proof", due: "2026-02-12", severity: "Medium", status: "In Progress" }
   ],
   passportItems: [
-    { id: "p1", name: "Aluminium billet", code: "76011000", description: "Primary aluminium", weight: 1200, supplier: "NordMet", notes: "Certified" }
+    {
+      id: "p1",
+      user_id: "user_1",
+      name: "Aluminium billet",
+      description: "Primary aluminium",
+      hs_code: "76011000",
+      supplier: "NordMet",
+      weight_per_unit: "1200",
+      weight: "1200",
+      notes: "Certified"
+    }
   ],
   invoices: [
     {
@@ -54,8 +64,17 @@ export const mockData = {
       ]
     }
   ],
-  collaborationLicenses: [
-    { id: "l1", name: "UK Steel Import License", expiry: "2026-08-20", status: "Active" }
+  licenses: [
+    {
+      id: "lic_1",
+      user_id: "user_1",
+      license_type: "UK Steel Import License",
+      license_number: "LIC-2026-001",
+      issuer: "UK Gov",
+      expires_on: "2026-08-20",
+      file_type: "PDF",
+      notes: "Annual renewal"
+    }
   ],
   marketInsights: [
     { id: "m1", title: "EU aluminium demand softening", summary: "Q1 outlook shows 4% drop", date: "2026-02-05" }
