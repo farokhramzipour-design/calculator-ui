@@ -38,8 +38,6 @@ export const mockData = {
       description: "Primary aluminium",
       hs_code: "76011000",
       supplier: "NordMet",
-      weight_per_unit: "1200",
-      weight: "1200",
       notes: "Certified"
     }
   ],

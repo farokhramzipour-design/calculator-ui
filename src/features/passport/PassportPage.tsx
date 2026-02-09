@@ -18,8 +18,6 @@ interface PassportItem {
   description: string | null;
   hs_code: string | null;
   supplier: string | null;
-  weight_per_unit: string | null;
-  weight: string | null;
   notes: string | null;
 }
 
@@ -63,11 +61,11 @@ export function PassportPage() {
   });
 
   const form = useForm({
-    defaultValues: { name: "", hs_code: "", description: "", weight_per_unit: "", weight: "", supplier: "", notes: "" }
+    defaultValues: { name: "", hs_code: "", description: "", supplier: "", notes: "" }
   });
 
   const editForm = useForm({
-    defaultValues: { name: "", hs_code: "", description: "", weight_per_unit: "", weight: "", supplier: "", notes: "" }
+    defaultValues: { name: "", hs_code: "", description: "", supplier: "", notes: "" }
   });
 
   const createMutation = useMutation({
@@ -135,8 +133,6 @@ export function PassportPage() {
         name: selected.name,
         hs_code: selected.hs_code ?? "",
         description: selected.description ?? "",
-        weight_per_unit: selected.weight_per_unit ?? "",
-        weight: selected.weight ?? "",
         supplier: selected.supplier ?? "",
         notes: selected.notes ?? ""
       });
@@ -159,8 +155,6 @@ export function PassportPage() {
             <Input placeholder="Name" {...form.register("name")} />
             <Input placeholder="HS/TARIC code" {...form.register("hs_code")} />
             <Input placeholder="Description" {...form.register("description")} />
-            <Input placeholder="Weight per unit" {...form.register("weight_per_unit")} />
-            <Input placeholder="Weight" {...form.register("weight")} />
             <Input placeholder="Supplier" {...form.register("supplier")} />
             <Input placeholder="Notes" {...form.register("notes")} />
             <Button type="submit" className="md:col-span-3">Save item</Button>
@@ -175,22 +169,20 @@ export function PassportPage() {
         <CardContent>
           <Table>
             <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>HS Code</TableHead>
-                <TableHead>Weight/unit</TableHead>
-                <TableHead>Supplier</TableHead>
-                <TableHead>Action</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {listQuery.data?.map((item) => (
-                <TableRow key={item.id} className="cursor-pointer" onClick={() => setSelectedId(item.id)}>
-                  <TableCell>{item.name}</TableCell>
-                  <TableCell>{item.hs_code ?? "-"}</TableCell>
-                  <TableCell>{item.weight_per_unit ?? "-"}</TableCell>
-                  <TableCell>{item.supplier ?? "-"}</TableCell>
-                  <TableCell>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>HS Code</TableHead>
+                  <TableHead>Supplier</TableHead>
+                  <TableHead>Action</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {listQuery.data?.map((item) => (
+                  <TableRow key={item.id} className="cursor-pointer" onClick={() => setSelectedId(item.id)}>
+                    <TableCell>{item.name}</TableCell>
+                    <TableCell>{item.hs_code ?? "-"}</TableCell>
+                    <TableCell>{item.supplier ?? "-"}</TableCell>
+                    <TableCell>
                     <Button
                       variant="outline"
                       size="sm"
@@ -201,7 +193,6 @@ export function PassportPage() {
                           JSON.stringify({
                             name: item.name,
                             hs_code: item.hs_code,
-                            weight_per_unit: item.weight_per_unit,
                             supplier: item.supplier
                           })
                         );
@@ -234,8 +225,6 @@ export function PassportPage() {
               <Input placeholder="Name" {...editForm.register("name")} />
               <Input placeholder="HS/TARIC code" {...editForm.register("hs_code")} />
               <Input placeholder="Description" {...editForm.register("description")} />
-              <Input placeholder="Weight per unit" {...editForm.register("weight_per_unit")} />
-              <Input placeholder="Weight" {...editForm.register("weight")} />
               <Input placeholder="Supplier" {...editForm.register("supplier")} />
               <Input placeholder="Notes" {...editForm.register("notes")} />
               <div className="md:col-span-3 flex gap-2">

@@ -1,3 +1,4 @@
+import React from "react";
 import { useParams } from "react-router-dom";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api/client";
@@ -49,6 +50,8 @@ interface InvoiceRead {
 export function ShipmentDetailPage() {
   const { push } = useToast();
   const { id } = useParams();
+  const [selectedInvoiceId, setSelectedInvoiceId] = React.useState("");
+  const [selectedInvoiceItemId, setSelectedInvoiceItemId] = React.useState("");
   const detailQuery = useQuery({
     queryKey: ["shipment", id],
     queryFn: () => api.get<ShipmentDetail>(`/shipments/${id}`),
@@ -107,6 +110,35 @@ export function ShipmentDetailPage() {
   const invoices = useMocks ? mockData.invoices : invoicesQuery.data ?? [];
   const linkedInvoice = invoices.find((inv) => inv.shipment_id === id) ?? null;
   const passportItems = passportQuery.data ?? [];
+  const invoiceForFill = invoices.find((inv) => inv.id === selectedInvoiceId) ?? null;
+  const invoiceItems = invoiceForFill?.items ?? [];
+  const activeInvoiceItem = invoiceItems.find((item) => item.id === selectedInvoiceItemId) ?? invoiceItems[0];
+
+  const freightIncludedTerms = new Set(["CFR", "CIF", "CPT", "CIP", "DAP", "DPU", "DDP"]);
+  const insuranceIncludedTerms = new Set(["CIF", "CIP", "DDP"]);
+  const freightLocked = shipment ? freightIncludedTerms.has(shipment.incoterm) : false;
+  const insuranceLocked = shipment ? insuranceIncludedTerms.has(shipment.incoterm) : false;
+
+  React.useEffect(() => {
+    if (!shipment) return;
+    if (freightLocked) costsForm.setValue("freight_amount", "0");
+    if (insuranceLocked) costsForm.setValue("insurance_amount", "0");
+  }, [shipment, freightLocked, insuranceLocked, costsForm]);
+
+  React.useEffect(() => {
+    if (!invoiceForFill || invoiceItems.length === 0) return;
+    const item = activeInvoiceItem ?? invoiceItems[0];
+    if (item) {
+      setSelectedInvoiceItemId(item.id);
+      itemForm.reset({
+        description: item.description ?? "",
+        hs_code: item.hs_code ?? "",
+        quantity: Number(item.quantity ?? 0),
+        unit_price: Number(item.unit_price ?? 0),
+        origin_country: item.origin_country ?? ""
+      });
+    }
+  }, [invoiceForFill, invoiceItems, activeInvoiceItem, itemForm]);
 
   const applyInvoiceToShipment = () => {
     if (!linkedInvoice) return;
@@ -181,6 +213,47 @@ export function ShipmentDetailPage() {
             <Button type="submit" className="md:col-span-5">Add item</Button>
           </form>
 
+          <div className="grid gap-3 md:grid-cols-3">
+            <Select value={selectedInvoiceId} onChange={(e) => setSelectedInvoiceId(e.target.value)}>
+              <option value="">Load items from invoice</option>
+              {invoices.map((invoice) => (
+                <option key={invoice.id} value={invoice.id}>
+                  {invoice.invoice_number ?? invoice.id} · {invoice.supplier_name ?? "-"}
+                </option>
+              ))}
+            </Select>
+            <Select
+              value={selectedInvoiceItemId}
+              onChange={(e) => setSelectedInvoiceItemId(e.target.value)}
+              disabled={!selectedInvoiceId}
+            >
+              <option value="">Select invoice item</option>
+              {invoiceItems.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.description} {item.hs_code ? `· ${item.hs_code}` : ""}
+                </option>
+              ))}
+            </Select>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                if (!selectedInvoiceId || !activeInvoiceItem) {
+                  push({ title: "Select invoice item", description: "Choose an invoice and item to load", variant: "error" });
+                  return;
+                }
+                itemForm.reset({
+                  description: activeInvoiceItem.description ?? "",
+                  hs_code: activeInvoiceItem.hs_code ?? "",
+                  quantity: Number(activeInvoiceItem.quantity ?? 0),
+                  unit_price: Number(activeInvoiceItem.unit_price ?? 0),
+                  origin_country: activeInvoiceItem.origin_country ?? ""
+                });
+              }}
+            >
+              Fill from invoice
+            </Button>
+          </div>
+
           <form
             className="grid gap-4 md:grid-cols-4"
             onSubmit={passportForm.handleSubmit((values) => {
@@ -216,8 +289,16 @@ export function ShipmentDetailPage() {
         </CardHeader>
         <CardContent>
           <form className="grid gap-4 md:grid-cols-2" onSubmit={costsForm.handleSubmit((values) => upsertCosts.mutate(values))}>
-            <Input placeholder="Freight amount" {...costsForm.register("freight_amount")} />
-            <Input placeholder="Insurance amount" {...costsForm.register("insurance_amount")} />
+            <Input
+              placeholder={freightLocked ? "Freight included (0)" : "Freight amount"}
+              readOnly={freightLocked}
+              {...costsForm.register("freight_amount")}
+            />
+            <Input
+              placeholder={insuranceLocked ? "Insurance included (0)" : "Insurance amount"}
+              readOnly={insuranceLocked}
+              {...costsForm.register("insurance_amount")}
+            />
             <Button type="submit" className="md:col-span-2">Save costs</Button>
           </form>
         </CardContent>

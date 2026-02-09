@@ -159,9 +159,8 @@ export function CalculatorPage() {
     const raw = localStorage.getItem("passport_prefill");
     if (!raw) return;
     try {
-      const data = JSON.parse(raw) as { hs_code?: string | null; weight_per_unit?: string | null };
+      const data = JSON.parse(raw) as { hs_code?: string | null };
       if (data.hs_code) form.setValue("goods_code", data.hs_code);
-      if (data.weight_per_unit) form.setValue("net_mass", Number(data.weight_per_unit));
       push({ title: "Passport item loaded", description: "Fields prefilled from passport library", variant: "success" });
     } catch {
       // ignore parse errors
