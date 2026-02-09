@@ -81,6 +81,29 @@ export function ShipmentDetailPage() {
     onSuccess: () => detailQuery.refetch()
   });
 
+  const updateItem = useMutation({
+    mutationFn: (payload: { itemId: string; data: Record<string, unknown> }) =>
+      api.put(`/shipments/${id}/items/${payload.itemId}`, payload.data),
+    onSuccess: () => {
+      push({ title: "Updated", description: "Shipment item updated", variant: "success" });
+      detailQuery.refetch();
+    },
+    onError: (error: Error) => {
+      push({ title: "Update failed", description: error.message, variant: "error" });
+    }
+  });
+
+  const deleteItem = useMutation({
+    mutationFn: (itemId: string) => api.delete(`/shipments/${id}/items/${itemId}`),
+    onSuccess: () => {
+      push({ title: "Deleted", description: "Shipment item removed", variant: "success" });
+      detailQuery.refetch();
+    },
+    onError: (error: Error) => {
+      push({ title: "Delete failed", description: error.message, variant: "error" });
+    }
+  });
+
   const addFromPassport = useMutation({
     mutationFn: (payload: { passportItemId: string; quantity: string; unitPrice: string }) =>
       api.post(`/shipments/${id}/items/from-passport?passport_item_id=${payload.passportItemId}&quantity=${payload.quantity}&unit_price=${payload.unitPrice}`),
@@ -189,16 +212,53 @@ export function ShipmentDetailPage() {
                 <TableHead>Quantity</TableHead>
                 <TableHead>Unit price</TableHead>
                 <TableHead>Origin</TableHead>
+                <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {shipment.items.map((item) => (
                 <TableRow key={item.id}>
-                  <TableCell>{item.description}</TableCell>
-                  <TableCell>{item.hs_code}</TableCell>
-                  <TableCell>{item.quantity}</TableCell>
-                  <TableCell>{item.unit_price}</TableCell>
-                  <TableCell>{item.origin_country}</TableCell>
+                  <TableCell>
+                    <Input defaultValue={item.description} onChange={(e) => (item.description = e.target.value)} />
+                  </TableCell>
+                  <TableCell>
+                    <Input defaultValue={item.hs_code} onChange={(e) => (item.hs_code = e.target.value)} />
+                  </TableCell>
+                  <TableCell>
+                    <Input defaultValue={item.quantity} onChange={(e) => (item.quantity = e.target.value)} />
+                  </TableCell>
+                  <TableCell>
+                    <Input defaultValue={item.unit_price} onChange={(e) => (item.unit_price = e.target.value)} />
+                  </TableCell>
+                  <TableCell>
+                    <Input defaultValue={item.origin_country} onChange={(e) => (item.origin_country = e.target.value)} />
+                  </TableCell>
+                  <TableCell className="flex gap-2">
+                    <Button
+                      size="sm"
+                      onClick={() =>
+                        updateItem.mutate({
+                          itemId: item.id,
+                          data: {
+                            description: item.description,
+                            hs_code: item.hs_code,
+                            origin_country: item.origin_country,
+                            quantity: item.quantity,
+                            unit_price: item.unit_price
+                          }
+                        })
+                      }
+                    >
+                      Update
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={() => deleteItem.mutate(item.id)}
+                    >
+                      Delete
+                    </Button>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
