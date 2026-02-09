@@ -16,6 +16,11 @@ interface InvoiceItemRead {
   description: string;
   hs_code: string | null;
   origin_country: string | null;
+  vat_code?: string | null;
+  pack_count?: number | string | null;
+  pack_type?: string | null;
+  net_weight?: number | string | null;
+  gross_weight?: number | string | null;
   quantity: string | null;
   unit_price: string | null;
   total_price: string | null;
@@ -29,6 +34,11 @@ interface InvoiceRead {
   invoice_date: string | null;
   supplier_name: string | null;
   buyer_name: string | null;
+  buyer_address?: string | null;
+  seller_address?: string | null;
+  buyer_eori?: string | null;
+  seller_eori?: string | null;
+  incoterm?: string | null;
   currency: string | null;
   subtotal: string | null;
   freight: string | null;
@@ -113,7 +123,7 @@ export function InvoicesPage() {
     setDraft((prev) => (prev ? { ...prev, [field]: value } : prev));
   };
 
-  const updateItemField = (id: string, field: keyof InvoiceItemRead, value: string | null) => {
+  const updateItemField = (id: string, field: keyof InvoiceItemRead, value: string | number | null) => {
     setDraft((prev) =>
       prev
         ? {
@@ -124,8 +134,47 @@ export function InvoicesPage() {
     );
   };
 
-  const saveEdits = () => {
-    push({ title: "Edits saved", description: "Invoice edits are staged in the UI.", variant: "success" });
+  const saveEdits = async () => {
+    if (!draft) return;
+    const payload = {
+      invoice_number: draft.invoice_number ?? undefined,
+      invoice_date: draft.invoice_date ?? undefined,
+      supplier_name: draft.supplier_name ?? undefined,
+      buyer_name: draft.buyer_name ?? undefined,
+      buyer_address: draft.buyer_address ?? undefined,
+      seller_address: draft.seller_address ?? undefined,
+      buyer_eori: draft.buyer_eori ?? undefined,
+      seller_eori: draft.seller_eori ?? undefined,
+      incoterm: draft.incoterm ?? undefined,
+      currency: draft.currency ?? undefined,
+      subtotal: draft.subtotal ? Number(draft.subtotal) : undefined,
+      freight: draft.freight ? Number(draft.freight) : undefined,
+      insurance: draft.insurance ? Number(draft.insurance) : undefined,
+      tax_total: draft.tax_total ? Number(draft.tax_total) : undefined,
+      total: draft.total ? Number(draft.total) : undefined,
+      items: draft.items.map((item) => ({
+        id: item.id,
+        description: item.description,
+        hs_code: item.hs_code ?? undefined,
+        origin_country: item.origin_country ?? undefined,
+        vat_code: item.vat_code ?? undefined,
+        pack_count: item.pack_count ?? undefined,
+        pack_type: item.pack_type ?? undefined,
+        net_weight: item.net_weight ?? undefined,
+        gross_weight: item.gross_weight ?? undefined,
+        quantity: item.quantity ? Number(item.quantity) : undefined,
+        unit_price: item.unit_price ? Number(item.unit_price) : undefined,
+        total_price: item.total_price ? Number(item.total_price) : undefined
+      }))
+    };
+    try {
+      await api.patch(`/invoices/${draft.id}`, payload);
+      push({ title: "Edits saved", description: "Invoice updated successfully.", variant: "success" });
+      listQuery.refetch();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Update failed";
+      push({ title: "Save failed", description: message, variant: "error" });
+    }
   };
 
   return (
@@ -204,8 +253,28 @@ export function InvoicesPage() {
                 <Input value={draft.currency ?? ""} onChange={(e) => updateField("currency", e.target.value)} />
               </div>
               <div>
+                <p className="text-xs text-slate-500">Incoterm</p>
+                <Input value={draft.incoterm ?? ""} onChange={(e) => updateField("incoterm", e.target.value)} />
+              </div>
+              <div>
                 <p className="text-xs text-slate-500">Subtotal</p>
                 <Input value={draft.subtotal ?? ""} onChange={(e) => updateField("subtotal", e.target.value)} />
+              </div>
+              <div>
+                <p className="text-xs text-slate-500">Buyer address</p>
+                <Input value={draft.buyer_address ?? ""} onChange={(e) => updateField("buyer_address", e.target.value)} />
+              </div>
+              <div>
+                <p className="text-xs text-slate-500">Seller address</p>
+                <Input value={draft.seller_address ?? ""} onChange={(e) => updateField("seller_address", e.target.value)} />
+              </div>
+              <div>
+                <p className="text-xs text-slate-500">Buyer EORI</p>
+                <Input value={draft.buyer_eori ?? ""} onChange={(e) => updateField("buyer_eori", e.target.value)} />
+              </div>
+              <div>
+                <p className="text-xs text-slate-500">Seller EORI</p>
+                <Input value={draft.seller_eori ?? ""} onChange={(e) => updateField("seller_eori", e.target.value)} />
               </div>
               <div>
                 <p className="text-xs text-slate-500">Freight</p>
@@ -233,6 +302,8 @@ export function InvoicesPage() {
                   <TableHead>Origin</TableHead>
                   <TableHead>Quantity</TableHead>
                   <TableHead>Unit price</TableHead>
+                  <TableHead>Net weight</TableHead>
+                  <TableHead>Gross weight</TableHead>
                   <TableHead>Total</TableHead>
                 </TableRow>
               </TableHeader>
@@ -253,6 +324,12 @@ export function InvoicesPage() {
                     </TableCell>
                     <TableCell>
                       <Input value={item.unit_price ?? ""} onChange={(e) => updateItemField(item.id, "unit_price", e.target.value)} />
+                    </TableCell>
+                    <TableCell>
+                      <Input value={item.net_weight ?? ""} onChange={(e) => updateItemField(item.id, "net_weight", e.target.value)} />
+                    </TableCell>
+                    <TableCell>
+                      <Input value={item.gross_weight ?? ""} onChange={(e) => updateItemField(item.id, "gross_weight", e.target.value)} />
                     </TableCell>
                     <TableCell>
                       <Input value={item.total_price ?? ""} onChange={(e) => updateItemField(item.id, "total_price", e.target.value)} />
