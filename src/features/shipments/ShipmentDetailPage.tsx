@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useForm } from "react-hook-form";
+import { mockData, useMocks } from "@/lib/mock";
 
 interface ShipmentDetail {
   id: string;
@@ -20,12 +21,42 @@ interface ShipmentDetail {
   costs?: { freight_amount?: string | null; insurance_amount?: string | null } | null;
 }
 
+interface InvoiceRead {
+  id: string;
+  shipment_id: string | null;
+  invoice_number: string | null;
+  invoice_date: string | null;
+  supplier_name: string | null;
+  buyer_name: string | null;
+  currency: string | null;
+  subtotal: string | null;
+  freight: string | null;
+  insurance: string | null;
+  total: string | null;
+  items: Array<{
+    id: string;
+    description: string;
+    hs_code: string | null;
+    origin_country: string | null;
+    quantity: string | null;
+    unit_price: string | null;
+    total_price: string | null;
+  }>;
+}
+
 export function ShipmentDetailPage() {
   const { id } = useParams();
   const detailQuery = useQuery({
     queryKey: ["shipment", id],
     queryFn: () => api.get<ShipmentDetail>(`/shipments/${id}`),
     enabled: !!id
+  });
+
+  const invoicesQuery = useQuery({
+    queryKey: ["invoices"],
+    queryFn: () => api.get<InvoiceRead[]>("/invoices"),
+    enabled: !useMocks,
+    initialData: useMocks ? mockData.invoices : undefined
   });
 
   const itemForm = useForm({
@@ -47,6 +78,26 @@ export function ShipmentDetailPage() {
   });
 
   const shipment = detailQuery.data;
+  const invoices = useMocks ? mockData.invoices : invoicesQuery.data ?? [];
+  const linkedInvoice = invoices.find((inv) => inv.shipment_id === id) ?? null;
+
+  const applyInvoiceToShipment = () => {
+    if (!linkedInvoice) return;
+    const firstItem = linkedInvoice.items[0];
+    if (firstItem) {
+      itemForm.reset({
+        description: firstItem.description,
+        hs_code: firstItem.hs_code ?? "",
+        quantity: Number(firstItem.quantity ?? 0),
+        unit_price: Number(firstItem.unit_price ?? 0),
+        origin_country: firstItem.origin_country ?? ""
+      });
+    }
+    costsForm.reset({
+      freight_amount: linkedInvoice.freight ?? "",
+      insurance_amount: linkedInvoice.insurance ?? ""
+    });
+  };
 
   if (!shipment) return <div className="text-slate-200">Loading...</div>;
 
@@ -117,6 +168,51 @@ export function ShipmentDetailPage() {
           </form>
         </CardContent>
       </Card>
+
+      {linkedInvoice && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Linked invoice</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-3">
+              <div>
+                <p className="text-xs text-slate-500">Invoice #</p>
+                <p className="text-sm font-medium">{linkedInvoice.invoice_number ?? linkedInvoice.id}</p>
+              </div>
+              <div>
+                <p className="text-xs text-slate-500">Supplier</p>
+                <p className="text-sm font-medium">{linkedInvoice.supplier_name ?? "-"}</p>
+              </div>
+              <div>
+                <p className="text-xs text-slate-500">Total</p>
+                <p className="text-sm font-medium">{linkedInvoice.total ?? "-"}</p>
+              </div>
+            </div>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Description</TableHead>
+                  <TableHead>HS code</TableHead>
+                  <TableHead>Quantity</TableHead>
+                  <TableHead>Unit price</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {linkedInvoice.items.map((item) => (
+                  <TableRow key={item.id}>
+                    <TableCell>{item.description}</TableCell>
+                    <TableCell>{item.hs_code ?? "-"}</TableCell>
+                    <TableCell>{item.quantity ?? "-"}</TableCell>
+                    <TableCell>{item.unit_price ?? "-"}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+            <Button variant="secondary" onClick={applyInvoiceToShipment}>Load invoice data into shipment</Button>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>
