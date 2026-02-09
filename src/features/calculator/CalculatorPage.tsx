@@ -114,12 +114,86 @@ export function CalculatorPage() {
           <CardHeader>
             <CardTitle>Result</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-2 text-sm text-slate-600">
-            <p>Status: {calculateMutation.data.status}</p>
-            {calculateMutation.data.message && <p>Message: {calculateMutation.data.message}</p>}
+          <CardContent className="space-y-6 text-sm text-slate-600">
+            <div className="grid gap-4 md:grid-cols-3">
+              <div>
+                <p className="text-xs text-slate-500">Customs value</p>
+                <p className="text-lg font-semibold">{calculateMutation.data.breakdown?.customs_value ?? "-"}</p>
+              </div>
+              <div>
+                <p className="text-xs text-slate-500">Duty total</p>
+                <p className="text-lg font-semibold">{calculateMutation.data.breakdown?.duty_total ?? "-"}</p>
+              </div>
+              <div>
+                <p className="text-xs text-slate-500">VAT total</p>
+                <p className="text-lg font-semibold">{calculateMutation.data.breakdown?.vat_total ?? "-"}</p>
+              </div>
+              <div>
+                <p className="text-xs text-slate-500">VAT base</p>
+                <p className="text-lg font-semibold">{calculateMutation.data.breakdown?.vat_base ?? "-"}</p>
+              </div>
+              <div>
+                <p className="text-xs text-slate-500">Authorities total</p>
+                <p className="text-lg font-semibold">{calculateMutation.data.breakdown?.authorities_total ?? "-"}</p>
+              </div>
+              <div>
+                <p className="text-xs text-slate-500">Other duties</p>
+                <p className="text-lg font-semibold">{calculateMutation.data.breakdown?.other_duties_total ?? "-"}</p>
+              </div>
+              <div>
+                <p className="text-xs text-slate-500">Landed cost total</p>
+                <p className="text-lg font-semibold">{calculateMutation.data.breakdown?.landed_cost_total ?? "-"}</p>
+              </div>
+              <div>
+                <p className="text-xs text-slate-500">Cost per unit</p>
+                <p className="text-lg font-semibold">{calculateMutation.data.breakdown?.landed_cost_per_unit ?? "-"}</p>
+              </div>
+            </div>
+
+            <div>
+              <p className="font-medium text-slate-700">Per item</p>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Item ID</TableHead>
+                    <TableHead>HS Code</TableHead>
+                    <TableHead>Customs Value</TableHead>
+                    <TableHead>Duty Rate</TableHead>
+                    <TableHead>Duty Amount</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {calculateMutation.data.per_item?.map((item, idx) => (
+                    <TableRow key={item.item_id ?? idx}>
+                      <TableCell>{item.item_id ?? "-"}</TableCell>
+                      <TableCell>{item.hs_code ?? "-"}</TableCell>
+                      <TableCell>{item.customs_value ?? "-"}</TableCell>
+                      <TableCell>{item.duty_rate ?? "-"}</TableCell>
+                      <TableCell>{item.duty_amount ?? "-"}</TableCell>
+                    </TableRow>
+                  )) ?? (
+                    <TableRow>
+                      <TableCell colSpan={5}>No per-item data.</TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+
+            {calculateMutation.data.assumptions?.length ? (
+              <div>
+                <p className="font-medium text-slate-700">Assumptions</p>
+                <ul className="list-disc pl-4">
+                  {calculateMutation.data.assumptions.map((a, i) => (
+                    <li key={i}>{a}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+
             {calculateMutation.data.warnings?.length ? (
               <div>
-                <p className="font-medium">Warnings</p>
+                <p className="font-medium text-slate-700">Warnings</p>
                 <ul className="list-disc pl-4">
                   {calculateMutation.data.warnings.map((w, i) => (
                     <li key={i}>{w}</li>
