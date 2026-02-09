@@ -15,6 +15,8 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTrigger } from
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatCurrency } from "@/lib/utils";
 import { useToast } from "@/components/ui/toaster";
+import { mockData, useMocks } from "@/lib/mock";
+import { Link } from "react-router-dom";
 
 interface TaricResolveResponse {
   goods_code: string;
@@ -26,12 +28,59 @@ interface TaricResolveResponse {
   notes: string[];
 }
 
+interface ShipmentRead {
+  id: string;
+  direction: string;
+  destination_country: string | null;
+  origin_country_default: string;
+  incoterm: string;
+  currency: string;
+  import_date: string | null;
+  status: string;
+}
+
+interface ShipmentDetail extends ShipmentRead {
+  costs?: {
+    freight_amount?: string | null;
+    insurance_amount?: string | null;
+    brokerage_amount?: string | null;
+    port_fees_amount?: string | null;
+    inland_transport_amount?: string | null;
+    other_incidental_amount?: string | null;
+    notes?: string | null;
+  } | null;
+}
+
+interface InvoiceRead {
+  id: string;
+  shipment_id: string | null;
+  invoice_number: string | null;
+  invoice_date: string | null;
+  supplier_name: string | null;
+  buyer_name: string | null;
+  currency: string | null;
+  subtotal: string | null;
+  freight: string | null;
+  insurance: string | null;
+  total: string | null;
+  items: Array<{
+    id: string;
+    description: string;
+    hs_code: string | null;
+    origin_country: string | null;
+    quantity: string | null;
+    unit_price: string | null;
+    total_price: string | null;
+  }>;
+}
+
 export function CalculatorPage() {
   const { push } = useToast();
   const [step, setStep] = React.useState(1);
   const [showFreightDialog, setShowFreightDialog] = React.useState(false);
   const [insuranceMode, setInsuranceMode] = React.useState<"manual" | "estimate">("manual");
   const [resolveQuery, setResolveQuery] = React.useState({ goods_code: "", origin: "", date: "", additional_code: "" });
+  const [selectedShipmentId, setSelectedShipmentId] = React.useState("");
 
   const form = useForm<CalculatorFormValues>({
     resolver: zodResolver(calculatorSchema),
@@ -51,6 +100,60 @@ export function CalculatorPage() {
   const incoterm = form.watch("incoterm");
   const goodsValue = form.watch("goods_value");
   const destinationCountry = form.watch("destination_country");
+
+  const shipmentsQuery = useQuery({
+    queryKey: ["shipments"],
+    queryFn: () => api.get<{ shipments: ShipmentRead[] }>("/shipments"),
+    enabled: !useMocks,
+    initialData: useMocks ? mockData.shipments : undefined
+  });
+
+  const shipmentDetailQuery = useQuery({
+    queryKey: ["shipment", selectedShipmentId],
+    queryFn: () => api.get<ShipmentDetail>(`/shipments/${selectedShipmentId}`),
+    enabled: !!selectedShipmentId && !useMocks
+  });
+
+  const invoicesQuery = useQuery({
+    queryKey: ["invoices"],
+    queryFn: () => api.get<InvoiceRead[]>("/invoices"),
+    enabled: !useMocks,
+    initialData: useMocks ? mockData.invoices : undefined
+  });
+
+  const shipments = shipmentsQuery.data?.shipments ?? [];
+  const shipmentDetail = useMocks
+    ? shipments.find((s) => s.id === selectedShipmentId) ?? null
+    : shipmentDetailQuery.data ?? null;
+  const invoices = useMocks ? mockData.invoices : invoicesQuery.data ?? [];
+  const shipmentInvoice = invoices.find((inv) => inv.shipment_id === selectedShipmentId) ?? null;
+
+  React.useEffect(() => {
+    if (!shipmentDetail) return;
+    form.setValue("direction", shipmentDetail.direction);
+    form.setValue("destination_country", shipmentDetail.destination_country ?? "");
+    form.setValue("origin_country", shipmentDetail.origin_country_default);
+    form.setValue("incoterm", shipmentDetail.incoterm);
+    form.setValue("currency", shipmentDetail.currency);
+    if (shipmentDetail.import_date) form.setValue("import_date", shipmentDetail.import_date);
+    if (shipmentDetail.costs?.freight_amount) form.setValue("freight_cost", Number(shipmentDetail.costs.freight_amount));
+    if (shipmentDetail.costs?.insurance_amount) form.setValue("insurance_amount", Number(shipmentDetail.costs.insurance_amount));
+    if (shipmentDetail.costs?.brokerage_amount) form.setValue("brokerage_cost", Number(shipmentDetail.costs.brokerage_amount));
+    if (shipmentDetail.costs?.port_fees_amount) form.setValue("handling_cost", Number(shipmentDetail.costs.port_fees_amount));
+    if (shipmentDetail.costs?.other_incidental_amount) form.setValue("other_fees", Number(shipmentDetail.costs.other_incidental_amount));
+  }, [shipmentDetail, form]);
+
+  React.useEffect(() => {
+    if (!shipmentInvoice) return;
+    if (shipmentInvoice.currency) form.setValue("currency", shipmentInvoice.currency);
+    if (shipmentInvoice.subtotal) form.setValue("goods_value", Number(shipmentInvoice.subtotal));
+    if (shipmentInvoice.freight) form.setValue("freight_cost", Number(shipmentInvoice.freight));
+    if (shipmentInvoice.insurance) form.setValue("insurance_amount", Number(shipmentInvoice.insurance));
+    const itemWithHs = shipmentInvoice.items.find((item) => item.hs_code);
+    if (itemWithHs?.hs_code) form.setValue("goods_code", itemWithHs.hs_code);
+    if (itemWithHs?.origin_country) form.setValue("origin_country", itemWithHs.origin_country);
+    if (itemWithHs?.quantity) form.setValue("quantity", Number(itemWithHs.quantity));
+  }, [shipmentInvoice, form]);
 
   React.useEffect(() => {
     if (incoterm === "EXW" || incoterm === "FOB") {
@@ -144,6 +247,45 @@ export function CalculatorPage() {
         </TabsList>
         <TabsContent value="calculator">
           <form className="space-y-6" onSubmit={form.handleSubmit(onSubmit)}>
+            <Card>
+              <CardHeader>
+                <CardTitle>Load from shipment</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {shipments.length === 0 ? (
+                  <Alert variant="warning">
+                    No shipments available. Please create a shipment first.
+                    <div className="mt-2">
+                      <Link to="/shipments">
+                        <Button variant="outline" size="sm">Create shipment</Button>
+                      </Link>
+                    </div>
+                  </Alert>
+                ) : (
+                  <div className="grid gap-3 md:grid-cols-3">
+                    <div className="md:col-span-2">
+                      <label className="text-xs font-medium text-slate-600">Select shipment</label>
+                      <Select value={selectedShipmentId} onChange={(e) => setSelectedShipmentId(e.target.value)}>
+                        <option value="">Choose shipment</option>
+                        {shipments.map((shipment) => (
+                          <option key={shipment.id} value={shipment.id}>
+                            {shipment.id} · {shipment.origin_country_default} → {shipment.destination_country ?? "-"} · {shipment.status}
+                          </option>
+                        ))}
+                      </Select>
+                    </div>
+                    <div className="flex items-end">
+                      {shipmentInvoice ? (
+                        <Badge variant="success">Invoice linked</Badge>
+                      ) : (
+                        <Badge>Invoice not linked</Badge>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
             <Card>
               <CardHeader>
                 <CardTitle>Step 1: Shipment basics</CardTitle>
